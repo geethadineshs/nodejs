@@ -22,7 +22,15 @@ jobs:
       run: npm install
 
     - name: Copy files to AWS EC2
-      run: scp -i ${{ secrets.KEY }} -r ./* ubuntu@${{ secrets.HOST }}:/home/ubuntu/nodeapp
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.KEY }}
+        SSH_KNOWN_HOSTS: ${{ secrets.HOST }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan $SSH_KNOWN_HOSTS >> ~/.ssh/known_hosts
+        scp -i ~/.ssh/id_rsa -r ./* ubuntu@${{ secrets.HOST }}:/home/ubuntu/nodeapp
 
   deploy:
     needs: build
@@ -30,10 +38,17 @@ jobs:
 
     steps:
     - name: SSH into EC2 and deploy
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.KEY }}
+        SSH_KNOWN_HOSTS: ${{ secrets.HOST }}
       run: |
-        ssh -i ${{ secrets.KEY }} ubuntu@${{ secrets.HOST }} << 'EOF'
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan $SSH_KNOWN_HOSTS >> ~/.ssh/known_hosts
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.HOST }} << 'EOF'
           cd /home/ubuntu/nodeapp
           npm install
           pm2 stop all || true
-          pm2 start app.js --name my-node-app
+          pm2 start app.js --name nodeapp
         EOF
