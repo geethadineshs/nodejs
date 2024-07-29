@@ -25,7 +25,7 @@ jobs:
       run: scp -i ${{ secrets.KEY }} -r ./* ubuntu@${{ secrets.HOST }}:/home/ubuntu/nodeapp
 
   deploy:
-    needs: build
+    needs: build #build
     runs-on: ubuntu-latest
 
     steps:
