@@ -21,17 +21,19 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Build the nodejs app
-      run: npm run build
+    - name: Copy files to AWS EC2
+      run: scp -i ${{ secrets.KEY }} -r ./* ubuntu@${{ secrets.HOST }}:/home/ubuntu/nodeapp
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
 
-    - name: copy file via ssh key
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME || 'ubuntu'}}
-        port: ${{ secrets.PORT || 22 }}
-        key: ${{ secrets.KEY }}
-        source: "build/*"
-        target: /var/www/html/seebaby.staging
-        strip_components: 3
+    steps:
+    - name: SSH into EC2 and deploy
+      run: |
+        ssh -i ${{ secrets.KEY }} ubuntu@${{ secrets.HOST }} << 'EOF'
+          cd /home/ubuntu/nodeapp
+          npm install
+          pm2 stop all || true
+          pm2 start app.js --name nodeapp
+        EOF
