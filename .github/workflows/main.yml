@@ -28,7 +28,7 @@ jobs:
         username: ${{ secrets.USERNAME || 'ubuntu'}}
         port: ${{ secrets.PORT || 22 }}
         key: ${{ secrets.KEY }}
-        source: "build/*"
+        source: "build/*" #build
         target: /home/ubuntu/nodeapp
 
 
