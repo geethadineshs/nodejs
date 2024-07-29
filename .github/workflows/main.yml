@@ -21,12 +21,30 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: copy file via ssh key
+    - name: Copy files to AWS EC2
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME || 'ubuntu'}}
+        username: ${{ secrets.USERNAME || 'ubuntu' }}
         port: ${{ secrets.PORT || 22 }}
         key: ${{ secrets.KEY }}
-        source: "build/*"
-        target: /home/ubuntu/react
+        source: "."
+        target: "/home/ubuntu/nodeapp"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: SSH into EC2 and deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME || 'ubuntu' }}
+        port: ${{ secrets.PORT || 22 }}
+        key: ${{ secrets.KEY }}
+        script: |
+          cd /home/ubuntu/nodeapp
+          npm install
+          pm2 stop all || true
+          pm2 start app.js --nodejs-pro 
