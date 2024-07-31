@@ -30,20 +30,7 @@ pipeline {
                     sshagent(['devserver-ssh']) {
                         sh '''
                         ssh -o StrictHostKeyChecking=no ubuntu@${DEV_SERVER_IP} '
-                        cd /home/ubuntu/nodejs || exit
-                        if [ ! -d .git ]; then
-                            git init
-                            git remote add origin https://github.com/geethadineshs/nodejs.git
-                        fi
-                        git pull origin dev || exit
-                        if ! command -v npm &> /dev/null; then
-                            curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-                            sudo apt-get install -y nodejs
-                        fi
-                        npm install || exit
-                        pm2 restart node || pm2 start app.js --name node
-                        # Create filedev.txt to indicate successful deployment
-                        echo "Deployment to dev server successful" > /home/ubuntu/filedev.txt'
+                        echo "Changes detected in dev branch" > /home/ubuntu/nodejs/filedev.txt'
                         '''
                     }
                 }
@@ -60,20 +47,7 @@ pipeline {
                     sshagent(['liveserver-ssh']) {
                         sh '''
                         ssh -o StrictHostKeyChecking=no ubuntu@${LIVE_SERVER_IP} '
-                        cd /home/ubuntu/nodejs || exit
-                        if [ ! -d .git ]; then
-                            git init
-                            git remote add origin https://github.com/geethadineshs/nodejs.git
-                        fi
-                        git pull origin main || exit
-                        if ! command -v npm &> /dev/null; then
-                            curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-                            sudo apt-get install -y nodejs
-                        fi
-                        npm install || exit
-                        pm2 restart node || pm2 start app.js --name node
-                        # Create filelive.txt to indicate successful deployment
-                        echo "Deployment to live server successful" > /home/ubuntu/filelive.txt'
+                        echo "Changes detected in main branch" > /home/ubuntu/nodejs/filelive.txt'
                         '''
                     }
                 }
