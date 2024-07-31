@@ -1,62 +1,42 @@
-name: Node.js CI/CD
+name: node
 
 on:
-  push:
+  workflow_dispatch:
+  pull_request_target:
+    types:
+      - closed
     branches:
-      - main
+      - "dev"
+      - "main"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    environment: "${{ github.ref_name }}"
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.15.1'
+    - name: Set environment variables
+      run: |
+        if [[ "${{ github.ref_name }}" == "dev" ]]; then
+          echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
+          echo "DEPLOY_HOST=${{ secrets.DEV_SERVER_IP }}" >> $GITHUB_ENV
+          echo "DEPLOY_KEY=${{ secrets.SSH_PRIVATE_KEY_DEV }}" >> $GITHUB_ENV
+        elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          echo "DEPLOY_ENV=main" >> $GITHUB_ENV
+          echo "DEPLOY_HOST=${{ secrets.LIVE_SERVER_IP }}" >> $GITHUB_ENV
+          echo "DEPLOY_KEY=${{ secrets.SSH_PRIVATE_KEY_LIVE }}" >> $GITHUB_ENV
+        fi
 
-    - name: Install dependencies
-      run: npm install
-
-    - name: Copy files to AWS EC2
-      uses: appleboy/scp-action@v0.1.7
+    - name: Deployment
+      uses: appleboy/ssh-action@v0.1.7
       with:
-        host: ${{ secrets.HOST }}
+        host: ${{ env.DEPLOY_HOST }}
         username: ${{ secrets.USERNAME || 'ubuntu' }}
         port: ${{ secrets.PORT || 22 }}
-        key: ${{ secrets.KEY }}
-        source: "."
-        target: "/home/ubuntu/nodeapp"
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: SSH into EC2 and install Node.js, npm, and PM2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME || 'ubuntu' }}
-        port: ${{ secrets.PORT || 22 }}
-        key: ${{ secrets.KEY }}
+        key: ${{ env.DEPLOY_KEY }}
         script: |
-          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-          sudo apt-get install -y nodejs
-          sudo npm install -g pm2
-
-    - name: SSH into EC2 and deploy
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME || 'ubuntu' }}
-        port: ${{ secrets.PORT || 22 }}
-        key: ${{ secrets.KEY }}
-        script: |
-          cd /home/ubuntu/nodeapp
-          npm install
-          pm2 stop all || true
-          pm2 start app.js --name nodeapp
+          cd /var/www/html/nodejs
+          git pull origin ${{ env.DEPLOY_ENV }}
+          pm2 restart nodejs --update-env
