@@ -31,7 +31,7 @@ pipeline {
                     sshagent(['your-ssh-credentials-id']) {  // Replace with your SSH credentials ID
                         sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@${serverIP} '
-                        echo "${fileName}" > /path/to/your/directory/${fileName}
+                        echo "${fileName}" > /home/ubuntu/nodejs/${fileName}
                         '
                         """
                     }
